@@ -5,6 +5,8 @@
 #include "JSONParser.h"
 #include "JSONBaseListener.h"
 
+
+using namespace antlr4mw;
 using namespace antlr4;
 
 class TreeShapeListener : public JSONBaseListener
@@ -25,13 +27,14 @@ int main(int argc, const char *argv[])
     JSONLexer lexer(&input);
     CommonTokenStream tokens(&lexer);
     tokens.fill();
-		for (auto token : tokens.getTokens()) {
-			std::cout << token->toString() << std::endl;
-		}
+    for (auto token : tokens.getTokens())
+    {
+        std::cout << token->toString() << std::endl;
+    }
     JSONParser parser(&tokens);
 
-	tree::ParseTree *tree = parser.json();
-	std::cout << tree->toStringTree(&parser) << std::endl;
-	
+    tree::ParseTree *tree = parser.json();
+    std::cout << tree->toStringTree(&parser) << std::endl;
+
     return 0;
 }
