@@ -68,8 +68,8 @@ int main(int argc, const char *argv[])
     const auto pythonHome = exeDir + L"\\lib";
     const auto pythonPath = exeDir + L"\\lib;" + exeDir + L"\\app;";
 #else
-    const auto pythonHome = exeDir + L"/lib";
-    const auto pythonPath = exeDir + L"/lib:" + exeDir + L"/app";
+    const auto pythonHome = exeDir;
+    const auto pythonPath = exeDir + L"/Lib:" + exeDir + L"/lib-dylib:" + exeDir + L"/app";
 #endif
 
     // Initialize python

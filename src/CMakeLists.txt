@@ -168,4 +168,13 @@ add_custom_command(
   -E copy_directory ${CPYTHON_STDLIB_DIR} $<TARGET_FILE_DIR:${PROJECT_NAME}>/Lib
 )
 
+# Copy the Python stdlib into the build folder (needed by the embedded python)
+add_custom_command(
+  TARGET ${PROJECT_NAME} 
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND} 
+  -E copy_directory ${CMAKE_SOURCE_DIR}/cpython/build/lib.macosx-10.14-x86_64-3.8/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/lib-dylib
+)
+
+
 
