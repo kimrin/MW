@@ -42,7 +42,7 @@ else()
   ExternalProject_Add(CPYTHON
     DOWNLOAD_COMMAND ""
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/cpython
-    CONFIGURE_COMMAND cd ${CMAKE_SOURCE_DIR}/cpython && ./configure --disable-shared --prefix=${CMAKE_SOURCE_DIR}/../bin
+    CONFIGURE_COMMAND cd ${CMAKE_SOURCE_DIR}/cpython && ./configure --disable-shared
     BUILD_COMMAND cd ${CMAKE_SOURCE_DIR}/cpython && make
     INSTALL_COMMAND ""
     TEST_COMMAND ""
@@ -165,7 +165,7 @@ add_custom_command(
   TARGET ${PROJECT_NAME} 
   POST_BUILD
   COMMAND ${CMAKE_COMMAND} 
-  -E copy_directory ${CPYTHON_STDLIB_DIR} $<TARGET_FILE_DIR:${PROJECT_NAME}>/Lib
+  -E copy_directory ${CPYTHON_STDLIB_DIR} $<TARGET_FILE_DIR:${PROJECT_NAME}>/lib/python3.8m
 )
 
 # Copy the Python stdlib into the build folder (needed by the embedded python)
@@ -173,7 +173,7 @@ add_custom_command(
   TARGET ${PROJECT_NAME} 
   POST_BUILD
   COMMAND ${CMAKE_COMMAND} 
-  -E copy_directory ${CMAKE_SOURCE_DIR}/cpython/build/lib.macosx-10.14-x86_64-3.8/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/lib-dylib
+  -E copy_directory ${CMAKE_SOURCE_DIR}/cpython/build/lib.macosx-10.14-x86_64-3.8/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/lib/python3.8m/lib-dylib
 )
 
 
