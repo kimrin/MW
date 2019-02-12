@@ -1,13 +1,18 @@
 # minimum required CMAKE version
 CMAKE_MINIMUM_REQUIRED(VERSION 3.7 FATAL_ERROR)
+
 include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/pybind11/tools)
 
 project(mw)
 
-
 # compiler must be 11 or 14
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
+
+include(pybind11Tools)
+
 
 # Specify build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -62,32 +67,10 @@ else()
   set(CPYTHON_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/cpython/Include ${CMAKE_SOURCE_DIR}/cpython)
   set(CPYTHON_LIBRARY_DIR ${CMAKE_SOURCE_DIR}/cpython/Lib)
   set(CPYTHON_LIBRARY python3.8m)
-# if MacOS, this value should be .dylib
-  if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    set(CPYTHON_BIN ${CMAKE_SOURCE_DIR}/cpython/libpython3.8m.a)
-  else()    
-    set(CPYTHON_BIN ${CMAKE_SOURCE_DIR}/cpython/libpython3.8m.a)
+  set(CPYTHON_BIN ${CMAKE_SOURCE_DIR}/cpython/libpython3.8m.a)
   endif()
 endif()
 
-# Add the pybind11 library (optional)
-ExternalProject_Add(PYBIND
-  DOWNLOAD_COMMAND ""
-  SOURCE_DIR ${CMAKE_SOURCE_DIR}/pybind11
-  CMAKE_ARGS -DPYBIND11_TEST=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DPYTHONLIBS_FOUND=ON -DPYTHON_MODULE_EXTENSION=.a -DPYTHON_LIBRARY=${CPYTHON_BIN} -DPYTHON_INCLUDE_DIR=${CPYTHON_INCLUDE_DIR}
-  BUILD_COMMAND cmake --build . --config ${CMAKE_BUILD_TYPE}
-  INSTALL_COMMAND ""
-  TEST_COMMAND ""
-)
-
-set(PYBIND_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/pybind11/include)
-
-# Source and header files
-FILE(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-FILE(GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
-
-# Linking directories
-link_directories(${CPYTHON_LIBRARY_DIR})
 
 # required if linking to static library
 add_definitions(-DANTLR4CPP_STATIC)
@@ -121,25 +104,7 @@ add_executable(${PROJECT_NAME}
                ${HEADERS}
                ${ANTLR_SampleGrammarParser_CXX_OUTPUTS})
 
-target_link_libraries(${PROJECT_NAME} antlr4_static)
-
-# Add macros
-target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX=1)
-
-# Dependencies
-add_dependencies(${PROJECT_NAME} PYBIND)
-add_dependencies(${PROJECT_NAME} CPYTHON)
-
-# Include directories
-target_include_directories(${PROJECT_NAME} PRIVATE ${CPYTHON_INCLUDE_DIR})
-target_include_directories(${PROJECT_NAME} PRIVATE ${PYBIND_INCLUDE_DIR})
-
-# On MSVC build, the python library is automatically linked (crazy I know)
-if(NOT MSVC)
-  target_link_libraries(${PROJECT_NAME} ${CPYTHON_BIN})
-endif()
-
-# Set the executable to console application if MSVC
+               # Set the executable to console application if MSVC
 if(MSVC)
 	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
 endif()
@@ -176,5 +141,32 @@ add_custom_command(
   -E copy_directory ${CMAKE_SOURCE_DIR}/cpython/build/lib.macosx-10.14-x86_64-3.8/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/lib/python3.8m/lib-dylib
 )
 
+add_subdirectory(pybind11)
+
+set(PYBIND_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/pybind11/include)
+
+# Source and header files
+FILE(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+FILE(GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
+
+# Linking directories
+link_directories(${CPYTHON_LIBRARY_DIR})
+
+
+
+target_link_libraries(${PROJECT_NAME}
+                      antlr4_static
+                      pybind11::embed)
+
+# Add macros
+target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX=1)
+
+# Dependencies
+# add_dependencies(${PROJECT_NAME} PYBIND)
+add_dependencies(${PROJECT_NAME} CPYTHON)
+
+# Include directories
+target_include_directories(${PROJECT_NAME} PRIVATE ${CPYTHON_INCLUDE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${PYBIND_INCLUDE_DIR})
 
 
