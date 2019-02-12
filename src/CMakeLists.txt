@@ -68,7 +68,6 @@ else()
   set(CPYTHON_LIBRARY_DIR ${CMAKE_SOURCE_DIR}/cpython/Lib)
   set(CPYTHON_LIBRARY python3.8m)
   set(CPYTHON_BIN ${CMAKE_SOURCE_DIR}/cpython/libpython3.8m.a)
-  endif()
 endif()
 
 
