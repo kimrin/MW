@@ -1,10 +1,93 @@
 # minimum required CMAKE version
 CMAKE_MINIMUM_REQUIRED(VERSION 3.7 FATAL_ERROR)
-
+include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+project(mw)
+
 
 # compiler must be 11 or 14
 set(CMAKE_CXX_STANDARD 11)
+
+# Specify build type
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Debug")
+endif()
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
+
+if (CMAKE_BUILD_TYPE MATCHES "Debug")
+  set(CPYTHON_BUILD_TYPE Debug)
+else ()
+  set(CPYTHON_BUILD_TYPE Release)
+endif()
+
+# Add the cpython as an external project that will be included in the build
+if(MSVC)
+  if(CMAKE_CL_64)
+    set(CPYTHON_PLATFORM x64)
+    set(CPYTHON_BUILD_DIR amd64)
+  else()
+    set(CPYTHON_PLATFORM x86)
+    set(CPYTHON_BUILD_DIR win32)
+  endif()
+  ExternalProject_Add(CPYTHON
+    DOWNLOAD_COMMAND ""
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/cpython
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND cd ${CMAKE_SOURCE_DIR}/cpython && MSBuild.exe /p:Configuration=${CPYTHON_BUILD_TYPE} /property:Platform=${CPYTHON_PLATFORM} "PCBuild/python.vcxproj" /nologo /verbosity:minimal /consoleloggerparameters:summar
+    INSTALL_COMMAND ""
+    TEST_COMMAND ""
+  )
+else()
+  ExternalProject_Add(CPYTHON
+    DOWNLOAD_COMMAND ""
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/cpython
+    CONFIGURE_COMMAND cd ${CMAKE_SOURCE_DIR}/cpython && ./configure --disable-shared --prefix=${CMAKE_SOURCE_DIR}/../bin
+    BUILD_COMMAND cd ${CMAKE_SOURCE_DIR}/cpython && make
+    INSTALL_COMMAND ""
+    TEST_COMMAND ""
+  )
+endif()
+
+set(CPYTHON_STDLIB_DIR ${CMAKE_SOURCE_DIR}/cpython/Lib)
+if(MSVC)
+  set(CPYTHON_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/cpython/Include ${CMAKE_SOURCE_DIR}/cpython/PC)
+  set(CPYTHON_LIBRARY_DIR ${CMAKE_SOURCE_DIR}/cpython/PCBuild/${CPYTHON_BUILD_DIR})
+  if(CMAKE_BUILD_TYPE MATCHES "Debug")
+    set(CPYTHON_BIN ${CMAKE_SOURCE_DIR}/cpython/PCBuild/${CPYTHON_BUILD_DIR}/python38_d.dll)
+  else()
+    set(CPYTHON_BIN ${CMAKE_SOURCE_DIR}/cpython/PCBuild/${CPYTHON_BUILD_DIR}/python38.dll)
+  endif()
+else()
+  set(CPYTHON_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/cpython/Include ${CMAKE_SOURCE_DIR}/cpython)
+  set(CPYTHON_LIBRARY_DIR ${CMAKE_SOURCE_DIR}/cpython/Lib)
+  set(CPYTHON_LIBRARY python3.8m)
+# if MacOS, this value should be .dylib
+  if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    set(CPYTHON_BIN ${CMAKE_SOURCE_DIR}/cpython/libpython3.8m.a)
+  else()    
+    set(CPYTHON_BIN ${CMAKE_SOURCE_DIR}/cpython/libpython3.8m.a)
+  endif()
+endif()
+
+# Add the pybind11 library (optional)
+ExternalProject_Add(PYBIND
+  DOWNLOAD_COMMAND ""
+  SOURCE_DIR ${CMAKE_SOURCE_DIR}/pybind11
+  CMAKE_ARGS -DPYBIND11_TEST=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DPYTHONLIBS_FOUND=ON -DPYTHON_MODULE_EXTENSION=.a -DPYTHON_LIBRARY=${CPYTHON_BIN} -DPYTHON_INCLUDE_DIR=${CPYTHON_INCLUDE_DIR}
+  BUILD_COMMAND cmake --build . --config ${CMAKE_BUILD_TYPE}
+  INSTALL_COMMAND ""
+  TEST_COMMAND ""
+)
+
+set(PYBIND_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/pybind11/include)
+
+# Source and header files
+FILE(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+FILE(GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
+
+# Linking directories
+link_directories(${CPYTHON_LIBRARY_DIR})
 
 # required if linking to static library
 add_definitions(-DANTLR4CPP_STATIC)
@@ -22,13 +105,6 @@ set(ANTLR_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/antlr-4.7.2-complete.jar)
 # add macros to generate ANTLR Cpp code from grammar
 find_package(ANTLR REQUIRED)
 
-# Call macro to add lexer and grammar to your build dependencies.
-# antlr_target(SampleGrammarLexer TLexer.g4 LEXER
-#              PACKAGE antlrcpptest)
-# antlr_target(SampleGrammarParser TParser.g4 PARSER
-#              PACKAGE antlrcpptest
-#              DEPENDS_ANTLR SampleGrammarLexer)
-
 antlr_target(SampleGrammarParser JSON.g4 LEXER
              PARSER
              PACKAGE antlr4mw
@@ -39,6 +115,57 @@ antlr_target(SampleGrammarParser JSON.g4 LEXER
 include_directories(${ANTLR_SampleGrammarParser_OUTPUT_DIR})
 
 # add generated grammar to demo binary target
-add_executable(mwc MWMain.cpp
+add_executable(${PROJECT_NAME}
+               MWMain.cpp
+               ${SOURCES}
+               ${HEADERS}
                ${ANTLR_SampleGrammarParser_CXX_OUTPUTS})
-target_link_libraries(mwc antlr4_static)
+
+target_link_libraries(${PROJECT_NAME} antlr4_static)
+
+# Add macros
+target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX=1)
+
+# Dependencies
+add_dependencies(${PROJECT_NAME} PYBIND)
+add_dependencies(${PROJECT_NAME} CPYTHON)
+
+# Include directories
+target_include_directories(${PROJECT_NAME} PRIVATE ${CPYTHON_INCLUDE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${PYBIND_INCLUDE_DIR})
+
+# On MSVC build, the python library is automatically linked (crazy I know)
+if(NOT MSVC)
+  target_link_libraries(${PROJECT_NAME} ${CPYTHON_BIN})
+endif()
+
+# Set the executable to console application if MSVC
+if(MSVC)
+	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
+endif()
+
+# Copy Python DLL to the build folder if different
+add_custom_command(
+  TARGET ${PROJECT_NAME}
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND}
+  -E copy_if_different ${CPYTHON_BIN} $<TARGET_FILE_DIR:${PROJECT_NAME}>
+)
+
+# Copy our python sources to the build folder
+add_custom_command(
+  TARGET ${PROJECT_NAME}
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND}
+  -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/app $<TARGET_FILE_DIR:${PROJECT_NAME}>/app
+)
+
+# Copy the Python stdlib into the build folder (needed by the embedded python)
+add_custom_command(
+  TARGET ${PROJECT_NAME} 
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND} 
+  -E copy_directory ${CPYTHON_STDLIB_DIR} $<TARGET_FILE_DIR:${PROJECT_NAME}>/Lib
+)
+
+
