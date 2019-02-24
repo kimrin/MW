@@ -53,6 +53,7 @@ int main(int argc, const char *argv[])
 
         std::ifstream stream;
 
+#if 0
         // This imports example.py from app/example.py
         // The app folder is the root folder so you don't need to specify app.example.
         // The app/example script that is being imported is from the actual build folder!
@@ -68,6 +69,31 @@ int main(int argc, const char *argv[])
 
         const auto msg = myExampleInstance.attr("gen")(); // Calls the getMsg
         std::cout << "Got msg back on C++ side: " << msg.cast<std::string>() << std::endl;
+#endif
+
+    py::object main_python = py::module::import("__main__");
+    py::dict scope = main_python.attr("__dict__");
+    if (argc != 2)
+    {
+        std::cerr << "usage: $ ./mw python_generator.py" << std::endl;
+        return EXIT_SUCCESS;
+    }
+    auto ev = py::eval_file(argv[1], scope);
+    auto generatorClass = "";
+    auto prefix_class = "<class '__main__.";
+    for (auto item : scope)
+    {
+        py::print("key: {}, value={}"_s.format(item.first, item.second));
+        if (!py::repr(item.second).compare(0, prefix_class.size(), prefix_class))
+        {
+            generatorClass = item.first.cast<std::string>();
+        }
+        if (py::repr(item.second)
+    }
+    auto generator = main_python.attr(generatorClass);
+    auto myExampleInstance = generator();
+    const auto msg = myExampleInstance.attr("gen")(); // Calls the getMsg
+    std::cout << "Got msg back on C++ side: " << msg.cast<std::string>() << std::endl;
 
 #ifdef THIS_IS_THE_VERY_LONG_DEFINITION
         stream.open(argv[1]);

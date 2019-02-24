@@ -12,7 +12,7 @@ class Generator(object):
 
         jsmw = js['MW CU'] = {}
         
-        jsmw['@entry'] = [{'tweet', '@loop Hello MW!'}]
-        jsmw['@loop'] = [{'query': {'from': '@entry'}, 'tweet': '@println $arg'}]
+        jsmw[r'@entry'] = [{'tweet': r'@loop Hello MW!'}]
+        jsmw[r'@loop'] = [{'query': {'from': r'@entry'}, 'tweet': r'@println $arg'}]
 
         return json.dumps(js)

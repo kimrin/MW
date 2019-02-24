@@ -12,7 +12,9 @@ set(CMAKE_CXX_STANDARD 14)
 
 include(pybind11Tools)
 
-find_package(LLVM REQUIRED CONFIG)
+# find_package(LLVM REQUIRED CONFIG)
+add_subdirectory(LLVM)
+
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
