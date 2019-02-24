@@ -1,4 +1,3 @@
-# minimum required CMAKE version
 CMAKE_MINIMUM_REQUIRED(VERSION 3.7 FATAL_ERROR)
 
 include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
@@ -12,6 +11,11 @@ project(mw)
 set(CMAKE_CXX_STANDARD 14)
 
 include(pybind11Tools)
+
+find_package(LLVM REQUIRED CONFIG)
+
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 
 # Specify build type
@@ -72,6 +76,7 @@ endif()
 
 
 # required if linking to static library
+add_definitions(${LLVM_DEFINITIONS})
 add_definitions(-DANTLR4CPP_STATIC)
 
 # using /MD flag for antlr4_runtime (for Visual C++ compilers only)
@@ -94,7 +99,8 @@ antlr_target(SampleGrammarParser JSON.g4 LEXER
              VISITOR)
 
 # include generated files in project environment
-include_directories(${ANTLR_SampleGrammarParser_OUTPUT_DIR})
+include_directories(${LLVM_INCLUDE_DIRS}
+                    ${ANTLR_SampleGrammarParser_OUTPUT_DIR})
 
 # add generated grammar to demo binary target
 add_executable(${PROJECT_NAME}
@@ -155,7 +161,8 @@ link_directories(${CPYTHON_LIBRARY_DIR})
 
 target_link_libraries(${PROJECT_NAME}
                       antlr4_static
-                      pybind11::embed)
+                      pybind11::embed
+                      ${llvm_libs})
 
 # Add macros
 target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX=1)
@@ -163,6 +170,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX=1)
 # Dependencies
 # add_dependencies(${PROJECT_NAME} PYBIND)
 add_dependencies(${PROJECT_NAME} CPYTHON)
+
+# Find the libraries that correspond to the LLVM components
+# that we wish to use
+llvm_map_components_to_libnames(llvm_libs support core irreader)
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE ${CPYTHON_INCLUDE_DIR})

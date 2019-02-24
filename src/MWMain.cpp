@@ -1,17 +1,40 @@
 // -*- coding: utf-8 -*-
 
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
+#include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include <antlr4-runtime.h>
 #include <pybind11/embed.h>
+
 #include "JSONLexer.h"
 #include "JSONParser.h"
 #include "JSONBaseListener.h"
 
 namespace py = pybind11;
 using namespace py::literals;
+
 using namespace antlr4mw;
 using namespace antlr4;
+
+using namespace llvm;
 
 class TreeShapeListener : public JSONBaseListener
 {
@@ -35,19 +58,24 @@ int main(int argc, const char *argv[])
         // The app/example script that is being imported is from the actual build folder!
         // Cmake will copy the python scripts after you have compiled the source code.
         std::cout << "Importing module..." << std::endl;
-        auto example = py::module::import("app.example");
+        auto example = py::module::import("app.gen");
 
         std::cout << "Initializing class..." << std::endl;
-        const auto myExampleClass = example.attr("Example");
-        auto myExampleInstance = myExampleClass("Hello World"); // Calls the constructor
+        const auto myExampleClass = example.attr("Generator");
+        auto myExampleInstance = myExampleClass(); // Calls the constructor
         // Will print in the terminal window:
         // Example constructor with msg: Hello World
 
-        const auto msg = myExampleInstance.attr("getMsg")(); // Calls the getMsg
+        const auto msg = myExampleInstance.attr("gen")(); // Calls the getMsg
         std::cout << "Got msg back on C++ side: " << msg.cast<std::string>() << std::endl;
 
+#ifdef THIS_IS_THE_VERY_LONG_DEFINITION
         stream.open(argv[1]);
         ANTLRInputStream input(stream);
+#else
+        ANTLRInputStream input(msg.cast<std::string>());
+#endif
+
         JSONLexer lexer(&input);
         CommonTokenStream tokens(&lexer);
         tokens.fill();
@@ -66,5 +94,3 @@ int main(int argc, const char *argv[])
     }
 
     return EXIT_SUCCESS;
-}
-
