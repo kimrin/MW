@@ -15,4 +15,4 @@ class Generator(object):
         jsmw['@entry'] = [{'tweet', '@loop Hello MW!'}]
         jsmw['@loop'] = [{'query': {'from': '@entry'}, 'tweet': '@println $arg'}]
 
-        return json.dump(js)
+        return json.dumps(js)
