@@ -5,7 +5,7 @@ class Generator(object):
     def __init__(self):
         pass
     
-    def gen(self):
+    def codegen(self):
         js = {}
         js['Who creates MW?'] = 'Machine'
         js['MW Creator name'] = 'class Generator'

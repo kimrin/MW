@@ -5,7 +5,7 @@ include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/pybind11/tools)
 
-set(CMAKE_FIND_FRAMEWORK NEVER)
+# set(CMAKE_FIND_FRAMEWORK NEVER)
 project(mw)
 
 # compiler must be 11 or 14

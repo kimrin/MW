@@ -91,7 +91,7 @@ int main(int argc, const char *argv[])
     }
     auto generator = main_python.attr(generatorClass);
     auto myExampleInstance = generator();
-    const auto msg = myExampleInstance.attr("gen")(); // Calls the getMsg
+    const auto msg = myExampleInstance.attr("codegen")(); // Calls the getMsg
     std::cout << "Got msg back on C++ side: " << msg.cast<std::string>() << std::endl;
 
 #ifdef THIS_IS_THE_VERY_LONG_DEFINITION
