@@ -5,6 +5,7 @@ include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/pybind11/tools)
 
+set(CMAKE_FIND_FRAMEWORK NEVER)
 project(mw)
 
 # compiler must be 11 or 14
@@ -12,13 +13,10 @@ set(CMAKE_CXX_STANDARD 14)
 
 include(pybind11Tools)
 
-# find_package(LLVM REQUIRED CONFIG)
-add_subdirectory(LLVM)
-
+find_package(LLVM REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
 
 # Specify build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -149,7 +147,6 @@ add_custom_command(
 )
 
 add_subdirectory(pybind11)
-
 set(PYBIND_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/pybind11/include)
 
 # Source and header files
@@ -159,7 +156,9 @@ FILE(GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 # Linking directories
 link_directories(${CPYTHON_LIBRARY_DIR})
 
-
+# Find the libraries that correspond to the LLVM components
+# that we wish to use
+llvm_map_components_to_libnames(llvm_libs support core irreader)
 
 target_link_libraries(${PROJECT_NAME}
                       antlr4_static
@@ -172,10 +171,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX=1)
 # Dependencies
 # add_dependencies(${PROJECT_NAME} PYBIND)
 add_dependencies(${PROJECT_NAME} CPYTHON)
-
-# Find the libraries that correspond to the LLVM components
-# that we wish to use
-llvm_map_components_to_libnames(llvm_libs support core irreader)
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE ${CPYTHON_INCLUDE_DIR})

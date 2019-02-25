@@ -80,15 +80,14 @@ int main(int argc, const char *argv[])
     }
     auto ev = py::eval_file(argv[1], scope);
     auto generatorClass = "";
-    auto prefix_class = "<class '__main__.";
+    auto prefix_class = std::string("<class '__main__.");
     for (auto item : scope)
     {
         py::print("key: {}, value={}"_s.format(item.first, item.second));
-        if (!py::repr(item.second).compare(0, prefix_class.size(), prefix_class))
+        if (!py::repr(item.second).cast<std::string>().compare(0, prefix_class.size(), prefix_class))
         {
-            generatorClass = item.first.cast<std::string>();
+            generatorClass = item.first.cast<std::string>().c_str();
         }
-        if (py::repr(item.second)
     }
     auto generator = main_python.attr(generatorClass);
     auto myExampleInstance = generator();
