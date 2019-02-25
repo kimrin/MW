@@ -4,6 +4,9 @@ experimental garbage of programming languages.
 ## How to build:
 
 ```
+before build MW, please checkout llvm/llvm-project repository as llvm-project
+that same level of MW directory itself.
+
 in MW/llvm directory:
 
 $ ./install.sh
