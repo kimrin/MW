@@ -4,3 +4,6 @@
 [submodule "src/pybind11"]
 	path = src/pybind11
 	url = https://github.com/pybind/pybind11.git
+[submodule "src/jsonnet"]
+	path = src/jsonnet
+	url = https://github.com/google/jsonnet.git
