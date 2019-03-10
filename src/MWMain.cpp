@@ -28,6 +28,8 @@
 #include "JSONParser.h"
 #include "JSONBaseListener.h"
 
+#include "libjsonnet++.h"
+
 namespace py = pybind11;
 using namespace py::literals;
 
@@ -35,6 +37,15 @@ using namespace antlr4mw;
 using namespace antlr4;
 
 using namespace llvm;
+
+using namespace jsonnet;
+
+std::string readFile(const std::string& filename)
+{
+    std::ifstream in(filename);
+    return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+}
+
 
 class TreeShapeListener : public JSONBaseListener
 {
@@ -50,55 +61,48 @@ int main(int argc, const char *argv[])
 {
     try {
         py::scoped_interpreter guard{};
+        // py::module sys = py::module::import("sys");
+        // py::print(sys.attr("path"));
 
         std::ifstream stream;
 
-#if 0
-        // This imports example.py from app/example.py
-        // The app folder is the root folder so you don't need to specify app.example.
-        // The app/example script that is being imported is from the actual build folder!
-        // Cmake will copy the python scripts after you have compiled the source code.
-        std::cout << "Importing module..." << std::endl;
-        auto example = py::module::import("app.gen");
-
-        std::cout << "Initializing class..." << std::endl;
-        const auto myExampleClass = example.attr("Generator");
-        auto myExampleInstance = myExampleClass(); // Calls the constructor
-        // Will print in the terminal window:
-        // Example constructor with msg: Hello World
-
-        const auto msg = myExampleInstance.attr("gen")(); // Calls the getMsg
-        std::cout << "Got msg back on C++ side: " << msg.cast<std::string>() << std::endl;
-#endif
-
-    py::object main_python = py::module::import("__main__");
-    py::dict scope = main_python.attr("__dict__");
-    if (argc != 2)
-    {
-        std::cerr << "usage: $ ./mw python_generator.py" << std::endl;
-        return EXIT_SUCCESS;
-    }
-    auto ev = py::eval_file(argv[1], scope);
-    auto generatorClass = "";
-    auto prefix_class = std::string("<class '__main__.");
-    for (auto item : scope)
-    {
-        py::print("key: {}, value={}"_s.format(item.first, item.second));
-        if (!py::repr(item.second).cast<std::string>().compare(0, prefix_class.size(), prefix_class))
+        py::object main_python = py::module::import("__main__");
+        py::dict scope = main_python.attr("__dict__");
+        if (argc != 2)
         {
-            generatorClass = item.first.cast<std::string>().c_str();
+            std::cerr << "usage: $ ./mw python_generator.py" << std::endl;
+            return EXIT_SUCCESS;
         }
-    }
-    auto generator = main_python.attr(generatorClass);
-    auto myExampleInstance = generator();
-    const auto msg = myExampleInstance.attr("codegen")(); // Calls the getMsg
-    std::cout << "Got msg back on C++ side: " << msg.cast<std::string>() << std::endl;
+    
+        auto ev = py::eval_file(argv[1], scope);
+        auto generatorClass = "";
+        auto prefix_class = std::string("<class '__main__.");
+        for (auto item : scope)
+        {
+            py::print("key: {}, value={}"_s.format(item.first, item.second));
+            if (!py::repr(item.second).cast<std::string>().compare(0, prefix_class.size(), prefix_class))
+            {
+                generatorClass = item.first.cast<std::string>().c_str();
+            }
+        }
+        auto generator = main_python.attr(generatorClass);
+        auto myExampleInstance = generator();
+        const auto msg = myExampleInstance.attr("codegen")(); // Calls the getMsg
+        const auto msg_jso = myExampleInstance.attr("codegen_jsonnet")(); // Calls the getMsg
+        std::cout << "Got msg back on C++ side: " << msg.cast<std::string>() << std::endl;
 
 #ifdef THIS_IS_THE_VERY_LONG_DEFINITION
         stream.open(argv[1]);
         ANTLRInputStream input(stream);
 #else
-        ANTLRInputStream input(msg.cast<std::string>());
+        const std::string jsonnet_input = msg.cast<std::string>();
+        Jsonnet jsonnet;
+        jsonnet.init();
+        std::string output;
+        jsonnet.evaluateSnippet("snippet", jsonnet_input, &output);
+        std::cout << "jsonnet errors:" << jsonnet.lastError() << std::endl;
+
+        ANTLRInputStream input(output);
 #endif
 
         JSONLexer lexer(&input);

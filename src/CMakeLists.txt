@@ -1,5 +1,5 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.7 FATAL_ERROR)
-
+CMAKE_MINIMUM_REQUIRED(VERSION 3.13 FATAL_ERROR)
+set(CMAKE_MODULE_PATH "")
 include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -7,11 +7,12 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/pybind11/tools)
 
 # set(CMAKE_FIND_FRAMEWORK NEVER)
 project(mw)
-
 # compiler must be 11 or 14
 set(CMAKE_CXX_STANDARD 14)
 
 include(pybind11Tools)
+
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/jsonnet)
 
 find_package(LLVM REQUIRED CONFIG)
 
@@ -74,6 +75,9 @@ else()
   set(CPYTHON_BIN ${CMAKE_SOURCE_DIR}/cpython/libpython3.8m.a)
 endif()
 
+add_custom_target(check ${CMAKE_COMMAND} -E env PYTHONPATH=$<TARGET_FILE_DIR:${PROJECT_NAME}>/lib/python3.8m
+                  ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/app)
+
 
 # required if linking to static library
 add_definitions(${LLVM_DEFINITIONS})
@@ -107,9 +111,10 @@ add_executable(${PROJECT_NAME}
                MWMain.cpp
                ${SOURCES}
                ${HEADERS}
-               ${ANTLR_SampleGrammarParser_CXX_OUTPUTS})
+               ${ANTLR_SampleGrammarParser_CXX_OUTPUTS}
+               ${CMAKE_SOURCE_DIR}/jsonnet/cpp/libjsonnet++.cpp)
 
-               # Set the executable to console application if MSVC
+# Set the executable to console application if MSVC
 if(MSVC)
 	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
 endif()
@@ -154,26 +159,38 @@ FILE(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 FILE(GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 
 # Linking directories
-link_directories(${CPYTHON_LIBRARY_DIR})
+# link_directories(${CPYTHON_LIBRARY_DIR})
 
 # Find the libraries that correspond to the LLVM components
 # that we wish to use
 llvm_map_components_to_libnames(llvm_libs support core irreader)
 
+target_link_directories(${PROJECT_NAME} BEFORE
+                        PUBLIC /usr/local/lib)
+
 target_link_libraries(${PROJECT_NAME}
                       antlr4_static
+                      ${CMAKE_SOURCE_DIR}/cpython/libpython3.8m.a
                       pybind11::embed
-                      ${llvm_libs})
+                      ${llvm_libs}
+                      #${CMAKE_SOURCE_DIR}/../jsonnet/libjsonnet.dylib
+                      /usr/local/lib/libjsonnet.dylib)
+
+set(LIBJSONNET_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/jsonnet/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${LIBJSONNET_INCLUDE_DIRS})
 
 # Add macros
 target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX=1)
 
 # Dependencies
 # add_dependencies(${PROJECT_NAME} PYBIND)
-add_dependencies(${PROJECT_NAME} CPYTHON)
+add_dependencies(${PROJECT_NAME}
+                 CPYTHON)
+
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE ${CPYTHON_INCLUDE_DIR})
 target_include_directories(${PROJECT_NAME} PRIVATE ${PYBIND_INCLUDE_DIR})
 
+set(ENV{PYTHONPATH} ${CMAKE_SOURCE_DIR}/cpython/Lib)
 
