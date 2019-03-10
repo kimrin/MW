@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+#include <stdlib.h>
+
 #include <antlr4-runtime.h>
 #include <pybind11/embed.h>
 
@@ -59,6 +61,14 @@ class TreeShapeListener : public JSONBaseListener
 
 int main(int argc, const char *argv[])
 {
+    char *p;
+    p = getenv("HOME");
+    char buf[4096];
+    strcpy(buf, "PYTHONPATH=");
+    strcat(buf, p);
+    strcat(buf, "/MW/src/cpython/Lib");
+    putenv(buf);
+
     try {
         py::scoped_interpreter guard{};
         // py::module sys = py::module::import("sys");
