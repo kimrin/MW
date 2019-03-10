@@ -27,11 +27,11 @@ $ ./install.sh
 ```
 in MW/bin directory:
 
-$ ./mw ../src/app/gen.py
+$ PYTHONPATH=../src/cpython/Lib ./mw ../src/app/expression.py
 ```
 
-mw reads gen.py python file, then call first class's constructor and `codegen` method.
-`codegen` method returns JSON of MW program, and mw attempt to parse this JSON.
+mw reads gen.py python file, then call first class's constructor and `codegen_jsonnet` method.
+`codegen_jsonnet` method returns JSONNET of MW program, and mw attempt to send this JSONNET to jsonnet compilers and will get JSON for compilations of MW compiler itself.
 
 The code parts of using LLVM (compiler itself) is not yet implemented.
 
